@@ -26,22 +26,25 @@ else:
 
 # get from address and replace
 from_name, from_addr = email.utils.parseaddr(msg.get("From"))
-msg.replace_header("From", email.utils.formataddr(("", args.addr)))
+msg.replace_header("From", email.utils.formataddr(("Secret Friend", args.addr)))
 
 # read friends list
 with open(args.csv) as csv_file:
-    for knownfriend, secretfriend in csv.reader(csv_file):
-        if knownfriend == from_addr:
-            break
-    else:
-        # did not find secret friend, abort submission
-        exit(100)
+    friends_list = list(csv.reader(csv_file))
+    friends = dict(friends_list)
+    friends.update([(b,a) for a,b in friends_list])
+
+try:
+    secretfriend = friends[from_addr]
+except KeyError:
+    # did not find secret friend, abort submission
+    exit(100)
 
 def replace_secretfriend(addrs: List[str]) -> List[str]:
     cleaned = []
     for to_name, to_addr in email.utils.getaddresses(addrs):
         if to_addr == args.addr:
-            cleaned.append(("Secret Friend", secretfriend))
+            cleaned.append(("", secretfriend))
         else:
             cleaned.append((to_name, to_addr))
     
@@ -68,6 +71,6 @@ else:
         out.write(msg_string)
 
 # write message metadata to log
-with open("secretfriend_log.csv", "w") as log:
+with open("secretfriend_log.csv", "a") as log:
     writer = csv.writer(log)
     writer.writerow([msg.get("Date"), from_addr, secretfriend, msg.get("Subject")])

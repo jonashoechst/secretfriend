@@ -10,7 +10,7 @@ This implementation is based on the E-Mail system. A participant sends a mail to
 `secretfriend.py` is intendet to run in a qmail environment. The secret friend address can be configured using `.qmail` files, e.g.:
 
 ```
-|/home/hoechst7/secretfriend.py sf@jonashoechst.de /home/hoechst7/secretfriend/friends.csv | sendmail -t -oi
+|/home/hoechst7/secretfriend.py sf@jonashoechst.de friends.csv | sendmail -t -oi
 ```
 
 ## Sending E-Mail
