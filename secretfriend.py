@@ -7,7 +7,7 @@ import email.utils
 from io import TextIOWrapper
 import os
 import sys
-from typing import List
+from typing import List, Optional
 import argparse
 import csv
 import platform
@@ -21,6 +21,7 @@ argp.add_argument("addr", help="email address for sending mail (should match inc
 argp.add_argument("--csv", help="file to store matched friends", default="friends.csv", type=argparse.FileType("a+"))
 argp.add_argument("-r", "--read", help="file to read message from (default: stdin)", default=sys.stdin, type=argparse.FileType("r"))
 argp.add_argument("-l", "--log", help="file to write log messages to (default: messages.log)", default="messages.log", type=argparse.FileType("a"))
+argp.add_argument("--dump-dir", help="dump mails to disk", default=None, type=str)
 
 argp.add_argument("--welcome", help="welcome email", default="welcome.eml", type=argparse.FileType("r"))
 argp.add_argument("--match", help="match succeeded email", default="match.eml", type=argparse.FileType("r"))
@@ -40,14 +41,21 @@ class UnmatchedUser(Exception):
     pass
 
 
-def sendmail(msg: Message) -> int:
+def sendmail(msg: Message, dump_dir: Optional[str] = None) -> int:
+    # dump mail
+    msg_id = msg.get("Message-Id")
+    if dump_dir:
+        with open(f"{dump_dir}/{msg_id}.eml", "w") as dump:
+            dump.write(msg.as_string())
+
+    # send mail
     p = subprocess.Popen(["/usr/sbin/sendmail", "-t", "-oi"], stdin=subprocess.PIPE)
     p.communicate(msg.as_bytes())
 
     return p.returncode
 
 
-def sendmail_template(template: TextIOWrapper, mail_from: str, mail_to: str, reply_msg_id: str) -> int:
+def fill_template(template: TextIOWrapper, mail_from: str, mail_to: str, reply_msg_id: str) -> Message:
     logging.info(f"Sending {template.name} mail to {mail_to} ({reply_msg_id})")
     template.seek(0, os.SEEK_SET)
 
@@ -60,7 +68,7 @@ def sendmail_template(template: TextIOWrapper, mail_from: str, mail_to: str, rep
     welcome.add_header("References", reply_msg_id)
     welcome.add_header("In-Reply-To", reply_msg_id)
 
-    return sendmail(welcome)
+    return welcome
 
 
 def get_friend(csv_file: TextIOWrapper, user: str) -> str:
@@ -123,6 +131,9 @@ def main():
         datefmt="%Y-%m-%d %H:%M:%S",
     )
 
+    if args.dump_dir:
+        os.makedirs(args.dump_dir, exist_ok=True)
+
     # read email
     msg = emlp.parse(args.read)
 
@@ -142,13 +153,13 @@ def main():
     # if new user / new matched user, handle accordingly
     except (NewUser, NewMatch) as e:
         logging.info(f"new user {user}, sending welcome mail")
-        sendmail_template(args.welcome, args.addr, user, msg.get("Message-Id"))
+        sendmail(fill_template(args.welcome, args.addr, user, msg.get("Message-Id")), args.dump_dir)
 
         if isinstance(e, NewMatch):
             friend = get_friend(args.csv, user)
             logging.info(f"new match {user} / {friend}, sending match mails")
-            sendmail_template(args.match, args.addr, user, msg.get("Message-Id"))
-            sendmail_template(args.match, args.addr, friend, msg.get("Message-Id"))
+            sendmail(fill_template(args.match, args.addr, user, msg.get("Message-Id")), args.dump_dir)
+            sendmail(fill_template(args.match, args.addr, friend, msg.get("Message-Id")), args.dump_dir)
 
         exit(0)
 
