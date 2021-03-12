@@ -4,7 +4,7 @@ from datetime import datetime
 import email.parser
 import email.utils
 import sys
-from typing import List
+from typing import List, Tuple
 import argparse
 import csv
 import platform
@@ -30,9 +30,9 @@ msg.replace_header("From", email.utils.formataddr(("Secret Friend", args.addr)))
 
 # read friends list
 with open(args.csv) as csv_file:
-    friends_list = list(csv.reader(csv_file))
+    friends_list: List[Tuple[str, str]] = [(a, b) for a, b in csv.reader(csv_file)]
     friends = dict(friends_list)
-    friends.update([(b,a) for a,b in friends_list])
+    friends.update([(b, a) for a, b in friends_list])
 
 try:
     secretfriend = friends[from_addr]
@@ -40,26 +40,26 @@ except KeyError:
     # did not find secret friend, abort submission
     exit(100)
 
-def replace_secretfriend(addrs: List[str]) -> List[str]:
+
+def replace_secretfriend(addrs: List[str]) -> str:
     cleaned = []
     for to_name, to_addr in email.utils.getaddresses(addrs):
         if to_addr == args.addr:
             cleaned.append(("", secretfriend))
         else:
             cleaned.append((to_name, to_addr))
-    
+
     return ", ".join([email.utils.formataddr(addr) for addr in cleaned])
+
 
 # replace secret friend address in To and Cc header fields
 to = msg.get_all("To")
 if to:
-    to = replace_secretfriend(to)
-    msg.replace_header("To", to)
+    msg.replace_header("To", replace_secretfriend(to))
 
 cc = msg.get_all("Cc")
 if cc:
-    cc = replace_secretfriend(cc)
-    msg.replace_header("Cc", cc)
+    msg.replace_header("Cc", replace_secretfriend(cc))
 
 msg_string = f"Received: (secretfriend.py on {platform.node()}); {email.utils.format_datetime(datetime.now())}\n"
 msg_string = msg.as_string()
