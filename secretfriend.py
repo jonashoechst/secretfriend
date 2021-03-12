@@ -176,7 +176,7 @@ def main():
 
     # add secretfriend received header
     msg.add_header("Received", f"(secretfriend.py on {platform.node()}); {email.utils.format_datetime(datetime.now())}")
-    exit(sendmail(msg))
+    exit(sendmail(msg, args.dump_dir))
 
 
 if __name__ == "__main__":
