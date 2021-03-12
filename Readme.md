@@ -10,12 +10,12 @@ This implementation is based on the E-Mail system. A participant sends a mail to
 `secretfriend.py` is intendet to run in a qmail environment. The secret friend address can be configured using `.qmail` files, e.g.:
 
 ```
-|/home/hoechst7/secretfriend.py sf@jonashoechst.de friends.csv | sendmail -t -oi
+|/home/hoechst7/secretfriend/secretfriend.py sf@jonashoechst.de
 ```
 
-## Sending E-Mail
+## Sendmail
 
-`secretfriend.py` does not handle mail transfer, is instead just processes mail from stdin to stdout (or files if specified).
+`secretfriend.py` handles mail transfer via the local sendmail configuration, hence sendmail should be configured to allow mail sending.
 
 ## Anonymity
 
